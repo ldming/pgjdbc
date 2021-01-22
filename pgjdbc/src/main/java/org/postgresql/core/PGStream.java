@@ -223,6 +223,7 @@ public class PGStream implements Closeable, Flushable {
 
   private Socket createSocket(int timeout) throws IOException {
     Socket socket = socketFactory.createSocket();
+    setSocketOptions(socket);
     if (!socket.isConnected()) {
       // When using a SOCKS proxy, the host might not be resolvable locally,
       // thus we defer resolution until the traffic reaches the proxy. If there
@@ -233,6 +234,13 @@ public class PGStream implements Closeable, Flushable {
       socket.connect(address, timeout);
     }
     return socket;
+  }
+
+  public void setSocketOptions(Socket socket) throws IOException {
+    // Submitted by Jason Venner <jason@idiom.com>. Disable Nagle
+    // as we are selective about flushing output only when we
+    // really need to.
+    socket.setTcpNoDelay(true);
   }
 
   /**
@@ -248,11 +256,6 @@ public class PGStream implements Closeable, Flushable {
         + " excessive changeSocket calls";
 
     this.connection = socket;
-
-    // Submitted by Jason Venner <jason@idiom.com>. Disable Nagle
-    // as we are selective about flushing output only when we
-    // really need to.
-    connection.setTcpNoDelay(true);
 
     // Buffer sizes submitted by Sverre H Huseby <sverrehu@online.no>
     pgInput = new VisibleBufferedInputStream(connection.getInputStream(), 8192);
